@@ -1,0 +1,26 @@
+{
+    "agent": {
+        "model": "claude-sonnet-4-20250514",
+        "api_key": "your-api-key-here",
+        "base_url": "",
+        "system_prompt": "你是 MyClaw，一个有用的个人 AI 助手。回答要简洁、友好。"
+    },
+    "gateway": {
+        "port": 18789
+    },
+    "channels": {
+        "telegram": {
+            "enabled": false,
+            "bot_token": "your-bot-token-here"
+        },
+        "wechat": {
+            "enabled": false,
+            "base_url": "https://ilinkai.weixin.qq.com",
+            "token_path": "~/.myclaw/wechat"
+        }
+    },
+    "session": {
+        "store_path": "~/.myclaw/sessions",
+        "max_history": 50
+    }
+}

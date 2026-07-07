@@ -1,0 +1,17 @@
+# 配置文件（含敏感信息，不提交）
+myclaw.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 环境
+.env
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
