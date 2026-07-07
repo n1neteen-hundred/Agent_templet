@@ -11,6 +11,7 @@ from config import MyClawConfig, load_config
 from session import SessionStore
 from agents.agent import Agent
 from channels import BaseChannel
+from tools import tools
 
 
 class Gateway:
@@ -25,6 +26,10 @@ class Gateway:
         self.config = config
 
         # 初始化各个子系统
+        tools.configure(
+            read_dir=config.tools.read_dir,
+            write_dir=config.tools.write_dir,
+        )
         self.session_store = SessionStore(
             store_path=config.session.store_path,
             max_history=config.session.max_history,

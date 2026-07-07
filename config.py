@@ -64,12 +64,20 @@ class SessionConfig:
 
 
 @dataclass
+class ToolsConfig:
+    """工具沙箱的配置"""
+    read_dir: str = "~/.myclaw/workspace"
+    write_dir: str = "~/.myclaw/workspace/sandbox"
+
+
+@dataclass
 class MyClawConfig:
     """顶层配置，包含所有子配置"""
     agent: AgentConfig = field(default_factory=AgentConfig)
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
     channels: ChannelsConfig = field(default_factory=ChannelsConfig)
     session: SessionConfig = field(default_factory=SessionConfig)
+    tools: ToolsConfig = field(default_factory=ToolsConfig)
 
 
 # ---------- 配置加载函数 ----------
@@ -147,6 +155,14 @@ def _parse_config_file(path: Path) -> MyClawConfig:
                 base_url=wx.get("base_url", config.channels.wechat.base_url),
                 token_path=wx.get("token_path", config.channels.wechat.token_path),
             )
+
+    # 解析 tools 配置
+    if "tools" in raw:
+        tl = raw["tools"]
+        config.tools = ToolsConfig(
+            read_dir=tl.get("read_dir", config.tools.read_dir),
+            write_dir=tl.get("write_dir", config.tools.write_dir),
+        )
 
     # 解析 session 配置
     if "session" in raw:

@@ -22,5 +22,9 @@
     "session": {
         "store_path": "~/.myclaw/sessions",
         "max_history": 50
+    },
+    "tools": {
+        "read_dir": "~/.myclaw/workspace",
+        "write_dir": "~/.myclaw/workspace/sandbox"
     }
 }

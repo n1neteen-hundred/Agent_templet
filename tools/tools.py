@@ -15,12 +15,26 @@ from typing import Callable
 # 路径安全配置
 # ============================================================
 
-# 读操作允许的根目录
-READ_ALLOWED_DIR = "/Users/liuxicheng/src/myclaw/workspace"
+# 读操作允许的根目录（默认值，可被 configure() 覆盖）
+READ_ALLOWED_DIR = os.path.expanduser("~/.myclaw/workspace")
 # 写操作允许的根目录（更严格）
-WRITE_ALLOWED_DIR = "/Users/liuxicheng/src/myclaw/workspace/sandbox"
+WRITE_ALLOWED_DIR = os.path.expanduser("~/.myclaw/workspace/sandbox")
 # 文件大小限制（字节）
 MAX_FILE_SIZE = 100 * 1024  # 100KB
+
+
+def configure(read_dir: str | None = None, write_dir: str | None = None) -> None:
+    """
+    配置沙箱目录（由 Gateway 启动时根据 myclaw.json 调用）。
+    同时确保目录存在，避免首次使用时工具因目录缺失而报错。
+    """
+    global READ_ALLOWED_DIR, WRITE_ALLOWED_DIR
+    if read_dir:
+        READ_ALLOWED_DIR = os.path.expanduser(read_dir)
+    if write_dir:
+        WRITE_ALLOWED_DIR = os.path.expanduser(write_dir)
+    os.makedirs(READ_ALLOWED_DIR, exist_ok=True)
+    os.makedirs(WRITE_ALLOWED_DIR, exist_ok=True)
 
 
 def _validate_path(path: str, allowed_dir: str, operation: str) -> str:
@@ -66,7 +80,11 @@ class Tool:
     def to_schema(self) -> dict:
         return {
             "name": self.name,
-            "description": self.description,
+            # description 支持 {read_dir}/{write_dir} 占位符，
+            # 在生成 schema 时才填入，保证 configure() 之后路径是最新的
+            "description": self.description.format(
+                read_dir=READ_ALLOWED_DIR, write_dir=WRITE_ALLOWED_DIR
+            ),
             "input_schema": self.parameters
         }
 
@@ -114,7 +132,7 @@ def _read_file(tool_input: dict) -> str:
 
 read_file_tool = Tool(
     name="read_file",
-    description="读取指定路径文件的完整内容。只能读取 /Users/liuxicheng/src/myclaw/workspace 目录内的文件，访问其他路径会被安全策略拒绝。遇到路径被拒绝时，必须停止重试并直接告知用户。",
+    description="读取指定路径文件的完整内容。只能读取 {read_dir} 目录内的文件，访问其他路径会被安全策略拒绝。遇到路径被拒绝时，必须停止重试并直接告知用户。",
     parameters={
         "type": "object",
         "properties": {
@@ -158,7 +176,7 @@ def _write_file(tool_input: dict) -> str:
 
 write_file_tool = Tool(
     name="write_file",
-    description="创建新文件或覆盖已有文件的全部内容。会自动创建不存在的父目录。只能写入 /Users/liuxicheng/src/myclaw/workspace/sandbox 目录内的文件，访问其他路径会被安全策略拒绝。",
+    description="创建新文件或覆盖已有文件的全部内容。会自动创建不存在的父目录。只能写入 {write_dir} 目录内的文件，访问其他路径会被安全策略拒绝。",
     parameters={
         "type": "object",
         "properties": {
@@ -223,7 +241,7 @@ def _edit_file(tool_input: dict) -> str:
 
 edit_file_tool = Tool(
     name="edit_file",
-    description="通过精确匹配替换来编辑文件的一部分内容。需要提供要被替换的原文本（old_text）和替换后的新文本（new_text）。old_text 必须在文件中唯一匹配。只能编辑 /Users/liuxicheng/src/myclaw/workspace/sandbox 目录内的文件，访问其他路径会被安全策略拒绝。",
+    description="通过精确匹配替换来编辑文件的一部分内容。需要提供要被替换的原文本（old_text）和替换后的新文本（new_text）。old_text 必须在文件中唯一匹配。只能编辑 {write_dir} 目录内的文件，访问其他路径会被安全策略拒绝。",
     parameters={
         "type": "object",
         "properties": {
@@ -277,16 +295,17 @@ def execute_tool(name: str, tool_input: dict) -> str:
 
 
 if __name__ == "__main__":
+    configure()  # 确保沙箱目录存在
+
     print("=== 工具列表 ===")
     for schema in get_tools_schema():
         print(f"  - {schema['name']}: {schema['description']}")
 
-    print("\n=== 测试 read_file ===")
-    print(execute_tool("read_file", {"path": __file__}))
+    test_path = os.path.join(WRITE_ALLOWED_DIR, "myclaw_test.txt")
 
     print("\n=== 测试 write_file ===")
-    print(execute_tool("write_file", {"path": "/tmp/myclaw_test.txt", "content": "hello myclaw!"}))
+    print(execute_tool("write_file", {"path": test_path, "content": "hello myclaw!"}))
 
     print("\n=== 测试 edit_file ===")
-    print(execute_tool("edit_file", {"path": "/tmp/myclaw_test.txt", "old_text": "hello", "new_text": "hi"}))
-    print(execute_tool("read_file", {"path": "/tmp/myclaw_test.txt"}))
+    print(execute_tool("edit_file", {"path": test_path, "old_text": "hello", "new_text": "hi"}))
+    print(execute_tool("read_file", {"path": test_path}))
